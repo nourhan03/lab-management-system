@@ -12,6 +12,7 @@ from future_needs import FutureNeedsResource
 import signal
 import sys
 import os
+import urllib.parse
 from dotenv import load_dotenv
 from sqlalchemy.exc import OperationalError
 
@@ -22,8 +23,30 @@ def create_app(config_name='default'):
     app = Flask(__name__)
     CORS(app, resources={r"/*": {"origins": "*"}})
     
-    # استخدام متغير البيئة لرابط قاعدة البيانات
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mssql+pyodbc://localhost/LabPhysicsFinalDb?driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes&charset=UTF8')
+    # استخدام متغير البيئة إذا وجد، وإلا استخدام الإعدادات المضمنة
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if database_url:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        app.logger.info('Using DATABASE_URL from environment variables')
+    else:
+        # تكوين سلسلة الاتصال المضمنة
+        connection_string = (
+            "Driver={ODBC Driver 17 for SQL Server};"
+            "Server=db17785.public.databaseasp.net;"
+            "Database=db17785;"
+            "UID=db17785;"
+            "PWD=9t?TyP7#@6pX;"
+            "Encrypt=no;"
+            "TrustServerCertificate=yes;"
+            "MultipleActiveResultSets=True;"
+            "Connection Timeout=30;"
+        )
+
+        params = urllib.parse.quote_plus(connection_string)
+        app.config['SQLALCHEMY_DATABASE_URI'] = f"mssql+pyodbc:///?odbc_connect={params}"
+        app.logger.info('Using embedded connection string')
+    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     app.config['JSON_AS_ASCII'] = False
@@ -42,6 +65,12 @@ def create_app(config_name='default'):
     # إضافة نقطة وصول للتحقق من صحة التطبيق
     @app.route('/health')
     def health_check():
+        # فحص أساسي للخدمة (يتجاهل قاعدة البيانات)
+        return jsonify({"status": "healthy", "service": "online"})
+    
+    # نقطة وصول للتحقق من اتصال قاعدة البيانات
+    @app.route('/health/db')
+    def db_health_check():
         try:
             # محاولة التحقق من اتصال قاعدة البيانات
             with app.app_context():
@@ -119,12 +148,14 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    scheduler.start()
-    
     try:
+        scheduler.start()
+        print(f'Starting app on port {port}')
         socketio.run(app, host='0.0.0.0', port=port, debug=False, use_reloader=False)
     except KeyboardInterrupt:
         print('تم إيقاف التطبيق بواسطة المستخدم')
+    except Exception as e:
+        print(f'Error starting the app: {str(e)}')
     finally:
         cleanup_resources()
 
