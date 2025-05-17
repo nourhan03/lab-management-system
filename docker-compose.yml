@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=mssql+pyodbc://localhost/LabPhysicsFinalDb?driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes&charset=UTF8
+    volumes:
+      - .:/app
+    restart: always 

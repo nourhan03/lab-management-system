@@ -1,0 +1,11 @@
+flask
+flask-restful
+flask-sqlalchemy
+flask-cors
+flask-socketio
+flask-apscheduler
+pyodbc
+sqlalchemy
+python-dotenv
+gunicorn
+eventlet
