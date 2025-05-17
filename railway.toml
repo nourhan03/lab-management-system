@@ -1,12 +1,16 @@
 [build]
 builder = "DOCKERFILE"
 dockerfile = "Dockerfile"
+buildCommand = "docker build -t app ."
 
 [deploy]
 startCommand = "python app.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
+numReplicas = 1
+sleepApplication = false
 
 [service]
 internal_port = 5000
+auto_expose = true
